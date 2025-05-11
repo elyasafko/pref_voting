@@ -172,3 +172,11 @@ docs/.DS_Store
 .DS_Store
 docs/.DS_Store
 docs/.DS_Store
+
+# IntelliJ / PyCharm
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
