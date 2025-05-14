@@ -14,11 +14,6 @@ between a team and an opponent.
 
 """
 
-[b,p,a,c]
-
-[p,b,c]
-[c,p.b]
-
 from typing import Callable, List, Optional, Tuple
 
 
