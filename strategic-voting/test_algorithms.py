@@ -143,9 +143,33 @@ def test_algorithm1_random_output_shape():
         ]
 
         ok, vote = algorithm1_single_voter(dummy_F, team_profile, opponent_order, preferred)
+        assert ok
         if ok:
             # must be a permutation of the candidate set
             assert sorted(vote) == sorted(candidates)
+
+@pytest.mark.xfail(reason="stub – Algorithm 1 not yet implemented")
+def test_algorithm1_all_top_preferred():
+    """
+    If everyone (honest team and opponent) ranks 'p' first,
+    algorithm1_single_voter should always succeed.
+    """
+    # choose total number of candidates between 3 and 8
+    m = random.randint(3, 8)
+    # fixed pool of ‘‘other’’ candidates, then cut to m−1
+    others = ['a','b','c','d','e','f','g','h'][: m - 1]
+
+    # build team_profile: each voter has ['p'] + random permutation of others
+    team_profile = [
+        ['p'] + random.sample(others, k=len(others))
+        for _ in range(random.randint(0, 5))
+    ]
+    # opponent also has 'p' first
+    opponent_order = ['p'] + random.sample(others, k=len(others))
+
+    ok, vote = algorithm1_single_voter(dummy_F, team_profile, opponent_order, 'p')
+    assert ok
+    assert vote is not None
 
 #---Algorithm 2---
 
@@ -241,7 +265,28 @@ def test_algorithm2_random_output_shape():
         ]
 
         ok, votes = algorithm2_coalitional(dummy_F, team_profile, opponent_order, preferred, k)
+        assert ok
         if ok:
             assert isinstance(votes, list) and len(votes) == k
             for v in votes:
                 assert sorted(v) == sorted(candidates)
+
+@pytest.mark.xfail(reason="stub – Algorithm 2 not yet implemented")
+def test_algorithm2_all_top_preferred():
+    """
+    If everyone ranks 'p' first,
+    any coalition size k ≥ 1 should always succeed.
+    """
+    m = random.randint(3, 8)
+    others = ['a','b','c','d','e','f','g','h'][: m - 1]
+    team_profile = [
+        ['p'] + random.sample(others, k=len(others))
+        for _ in range(random.randint(0, 5))
+    ]
+    opponent_order = ['p'] + random.sample(others, k=len(others))
+    # pick between 1 and 3 manipulators
+    k = random.randint(2, 3)
+
+    ok, votes = algorithm2_coalitional(dummy_F, team_profile, opponent_order, 'p', k)
+    assert ok
+    assert votes is not None
