@@ -40,6 +40,7 @@ except ImportError:          # tests or minimal env
 #   WARNING – guards
 #   ERROR   – unexpected errors
 logger = logging.getLogger(__name__)
+logging.disable(logging.CRITICAL) # disable all logging by default
 
 def _setup_logging(detailed: bool = False) -> None:
     """
@@ -183,6 +184,7 @@ def make_x_approval(x: int) -> Callable[[List[List[str]]], List[str]]:
     return rule
 
 # ───────────────────── 1. shared helper utilities ────────────────────────
+@profile
 def _pos(candidate: str, ranking: Sequence[str]) -> int:
     """
     Compute paper‐style position of `candidate` in `ranking`.
@@ -207,9 +209,10 @@ def _pos(candidate: str, ranking: Sequence[str]) -> int:
     idx = ranking.index(candidate)
     result = len(ranking) - 1 - idx
 
-    logger.debug(f"[_pos] candidate='{candidate}', index_in_ranking={idx}, returned_position={result}")
+    logger.debug("[_pos] candidate=%r, index_in_ranking=%d, returned_position=%d",candidate, idx, result)
     return result
 
+@profile
 def _top_i(ranking: Sequence[str], i: int) -> List[str]:
     """
     Return the first i candidates from a ranking.
@@ -232,6 +235,7 @@ def _top_i(ranking: Sequence[str], i: int) -> List[str]:
     return list(ranking)[:i]
 
 # ──────────────────── Rational-Compromise helper ────────────────────────
+@profile
 def _rc_result(pt: Sequence[str], po: Sequence[str]) -> Optional[str]:
     """
     Compute the Rational-Compromise winner between two orderings.
@@ -256,23 +260,19 @@ def _rc_result(pt: Sequence[str], po: Sequence[str]) -> Optional[str]:
     m = len(pt)
     for j in range(1, m + 1):
         inter = set(_top_i(pt, j)) & set(_top_i(po, j)) # intersection of top-j
-        logger.debug(f"[RC] depth j={j}, pt_top={_top_i(pt, j)}, po_top={_top_i(po, j)}, intersection={sorted(inter)}")
-
+        logger.debug("[RC] depth j=%d, pt_top=%s, po_top=%s, intersection=%s",j, _top_i(pt, j), _top_i(po, j), sorted(inter))
         if inter:
             if len(inter) == 1:
                 winner = next(iter(inter)) # the set has exactly one element, get it
-                logger.info(f"[RC] singleton intersection at j={j} ⇒ returning '{winner}'")
+                logger.info("[RC] singleton intersection at j=%d ⇒ returning %r", j, winner)
                 return winner
             else:
-                logger.info(
-                    "[RC] intersection at j=%d is not singleton (%d items: %s) ⇒ returning None",
-                    j, len(inter), sorted(inter)
-                )
+                logger.info("[RC] intersection at j=%d is not singleton (%d items: %s) ⇒ returning None",j, len(inter), sorted(inter))
                 return None
 
     logger.debug("[RC] no intersection found at any depth ⇒ returning None")
     return None
-
+@profile
 def _compute_Hi(
         preferred: str,
         i: int,
@@ -305,10 +305,9 @@ def _compute_Hi(
     ['p','a']
     """
     Ai_po: Set[str] = set(_top_i(opponent_order, i))
-    logger.debug(f"[_compute_Hi] i={i}, opponent_top_i={sorted(Ai_po)}")
-
+    logger.debug("[_compute_Hi] i=%d, opponent_top_i=%s", i, sorted(Ai_po))
     H: List[str] = [preferred]
-    logger.debug(f"[_compute_Hi] initially H = {H}")
+    logger.debug("[_compute_Hi] initially H = %s", H)
 
     for c in pt:
         if len(H) == i: # already have i candidates
@@ -316,11 +315,12 @@ def _compute_Hi(
 
         if c != preferred and c not in Ai_po: # not in opponent's top-i
             H.append(c)
-            logger.debug(f"[_compute_Hi] adding '{c}' to H (size now {len(H)})")
+            logger.debug("[_compute_Hi] adding %r to H (size now %d)", c, len(H))
 
-    logger.debug(f"[_compute_Hi] final H_i = {H} for preferred='{preferred}' and i={i}")
+    logger.debug("[_compute_Hi] final H_i = %s for preferred=%r and i=%d", H, preferred, i)
     return H
 
+@profile
 def check_validation(opp: List[str], preferred: str, m: int) -> bool:
     """
     Guard: ensure opponent ranks `preferred` high enough for manipulation, if not, manipulation is impossible.
@@ -352,8 +352,7 @@ def check_validation(opp: List[str], preferred: str, m: int) -> bool:
     pos_val = _pos(preferred, opp)
     threshold = math.ceil(m / 2)
 
-    logger.debug(f"[check_validation] preferred='{preferred}', "
-                 f"pos_val={pos_val}, threshold={threshold}, m={m}")
+    logger.debug("[check_validation] preferred=%r, pos_val=%d, threshold=%d, m=%d",preferred, pos_val, threshold, m)
 
     if pos_val < threshold:
         logger.warning("Preferred candidate ranked too low by opponent – manipulation impossible.")
@@ -362,6 +361,7 @@ def check_validation(opp: List[str], preferred: str, m: int) -> bool:
     return True
 
 # ─────────────── Algorithm 1 – single-voter manipulation ────────────────
+@profile
 def algorithm1_single_voter(
     F: Callable[[List[List[str]]], List[str]],                   # social-welfare function
     team_profile : Union[List[List[str]], Profile],              # honest team ballots
@@ -399,9 +399,9 @@ def algorithm1_single_voter(
     team_profile = _explode_profile(team_profile)
 
     logger.info("\n[Alg-1] =========================================================")
-    logger.info(f"[Alg-1] opponent order  : {opponent_order}")
-    logger.info(f"[Alg-1] preferred       : '{preferred}'")
-    logger.info(f"[Alg-1] team profile ({len(team_profile)} voters): {team_profile}")
+    logger.info("[Alg-1] opponent order  : %s", opponent_order)
+    logger.info("[Alg-1] preferred       : %r", preferred)
+    logger.info("[Alg-1] team profile (%d voters): %s", len(team_profile), team_profile)
 
     m = len(opponent_order)
     if not check_validation(opponent_order, preferred, m):
@@ -410,14 +410,14 @@ def algorithm1_single_voter(
 
     # SWF order of the honest team
     pt = F(team_profile)
-    logger.info(f"[Alg-1] SWF order (pt)  : {pt}")
+    logger.info("[Alg-1] SWF order (pt)  : %s", pt)
 
     # iterate i = 1 … ⌈m/2⌉
     for i in range(1, math.ceil(m / 2) + 1):
-        logger.info(f"\n[Alg-1] ----- depth i = {i} -----")
+        logger.info("\n[Alg-1] ----- depth i = %d -----", i)
 
         Hi = _compute_Hi(preferred, i, pt, opponent_order)
-        logger.info(f"[Alg-1] H_i           = {Hi}   (size {len(Hi)} vs required {i})")
+        logger.info("[Alg-1] H_i           = %s   (size %d vs required %d)", Hi, len(Hi), i)
         if len(Hi) < i:
             logger.info("[Alg-1] › not enough candidates – skip depth")
             continue
@@ -427,9 +427,9 @@ def algorithm1_single_voter(
         lo_block = list(reversed([c for c in pt if c not in Hi]))
         pa       = hi_block + lo_block
 
-        logger.info(f"[Alg-1] hi_block      = {hi_block}")
-        logger.info(f"[Alg-1] lo_block      = {lo_block}")
-        logger.info(f"[Alg-1] ballot (pa)   = {pa}")
+        logger.info("[Alg-1] hi_block      = %s", hi_block)
+        logger.info("[Alg-1] lo_block      = %s", lo_block)
+        logger.info("[Alg-1] ballot (pa)   = %s", pa)
 
         # test if ‘preferred’ becomes the unique RC winner
         rc = _rc_result(F(team_profile + [pa]), opponent_order)
@@ -581,7 +581,7 @@ def main() -> None:
         logger.info(f"Manipulative ballot   : {ballot_1}")
     else:
         logger.info("Manipulation impossible under this profile.")
-    # ------------------------------------------------------------------
+"""    # ------------------------------------------------------------------
     # 1-B.  SAME EXAMPLE, Profile BUILT *AS IN* pref_voting DOCS (integers)
     # ------------------------------------------------------------------
     logger.info("\n===== DEMO 1-B: C-MaNego with canonical integer Profile =====")
@@ -639,7 +639,7 @@ def main() -> None:
         for idx, b in enumerate(ballots_2, 1):
             logger.info(f"Manipulator #{idx} ballot : {b}")
     else:
-        logger.info("Coalitional manipulation impossible under this profile.")
+        logger.info("Coalitional manipulation impossible under this profile.")"""
 
 
 # -------------------------------------------------------------------------
