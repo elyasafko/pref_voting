@@ -27,7 +27,7 @@ CSV_COAL     = "rc_coal.csv"
 RESULT_DIR.mkdir(exist_ok=True)
 
 N_SEEDS      = 50 # number of random instances per grid point
-M_VALUES      = list(range(3, 9))      # number of candidates (m)
+M_VALUES      = list(range(3, 11))      # number of candidates (m)
 N_TEAM_LIST   = list(range(2, 8))      # number of teams (voters)
 K_VALUES      = [2, 3, 4]            # number of coalitions (k)
 
@@ -61,13 +61,11 @@ def rc_single_trial(m: int, n_team: int, rule: str, seed: int):
 
 
 def rc_coalition_trial(m: int, n_team: int, k: int, rule: str, seed: int):
-    if rule == "borda":           # skip borda for coalitions
-        return None               # experiments_csv ignores None rows
     random.seed(seed)
     cands = [chr(65+i) for i in range(m)]
     team  = [random.sample(cands, m) for _ in range(n_team)]
     opp   = random.sample(cands, m)
-    pref  = opp[1]
+    pref  = random.choice(opp)
 
     ok, _ = algorithm2_coalitional(
         RULES[rule](m), team, opp, pref, k
@@ -88,7 +86,7 @@ coalition_grid = {
     "m": M_VALUES,
     "n_team": N_TEAM_LIST,
     "k": K_VALUES,
-    "rule": [r for r in RULES if r != "borda"],  # veto / plurality / 2-approval
+    "rule": list(RULES.keys()),
     "seed": range(N_SEEDS),
 }
 
@@ -103,7 +101,7 @@ def add_runtime_ms(df: pd.DataFrame) -> pd.DataFrame:
 
 # --- launch ------------------------------------------------------------
 if __name__ == "__main__":
-    plots_only = True  # set to True to skip running the trials
+    plots_only = False  # set to True to skip running the trials
     # SINGLE-VOTER
     if not plots_only:
         # SINGLE-VOTER

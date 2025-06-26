@@ -184,7 +184,6 @@ def make_x_approval(x: int) -> Callable[[List[List[str]]], List[str]]:
     return rule
 
 # ───────────────────── 1. shared helper utilities ────────────────────────
-@profile
 def _pos(candidate: str, ranking: Sequence[str]) -> int:
     """
     Compute paper‐style position of `candidate` in `ranking`.
@@ -212,7 +211,6 @@ def _pos(candidate: str, ranking: Sequence[str]) -> int:
     logger.debug("[_pos] candidate=%r, index_in_ranking=%d, returned_position=%d",candidate, idx, result)
     return result
 
-@profile
 def _top_i(ranking: Sequence[str], i: int) -> List[str]:
     """
     Return the first i candidates from a ranking.
@@ -235,7 +233,6 @@ def _top_i(ranking: Sequence[str], i: int) -> List[str]:
     return list(ranking)[:i]
 
 # ──────────────────── Rational-Compromise helper ────────────────────────
-@profile
 def _rc_result(pt: Sequence[str], po: Sequence[str]) -> Optional[str]:
     """
     Compute the Rational-Compromise winner between two orderings.
@@ -272,7 +269,7 @@ def _rc_result(pt: Sequence[str], po: Sequence[str]) -> Optional[str]:
 
     logger.debug("[RC] no intersection found at any depth ⇒ returning None")
     return None
-@profile
+
 def _compute_Hi(
         preferred: str,
         i: int,
@@ -327,7 +324,6 @@ def _compute_Hi(
     logger.debug("[_compute_Hi] final H_i = %s for preferred=%r and i=%d", H, preferred, i)
     return H
 
-@profile
 def check_validation(opp: List[str], preferred: str, m: int) -> bool:
     """
     Guard: ensure opponent ranks `preferred` high enough for manipulation, if not, manipulation is impossible.
@@ -368,7 +364,6 @@ def check_validation(opp: List[str], preferred: str, m: int) -> bool:
     return True
 
 # ─────────────── Algorithm 1 – single-voter manipulation ────────────────
-@profile
 def algorithm1_single_voter(
     F: Callable[[List[List[str]]], List[str]],                   # social-welfare function
     team_profile : Union[List[List[str]], Profile],              # honest team ballots
